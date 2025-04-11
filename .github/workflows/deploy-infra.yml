@@ -57,5 +57,5 @@ jobs:
             --parameter-overrides \
               GitHubOwner=${{ github.repository_owner }} \
               GitHubRepo=ecsworkshop-app \
-              GitHubToken=${{ secrets.PERONAL_ACCESS_TOKEN }} \
+              GitHubToken=${{ secrets.PERSONAL_ACCESS_TOKEN }} \
             --no-fail-on-empty-changeset
