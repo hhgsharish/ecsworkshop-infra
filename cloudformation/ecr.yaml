@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ECR Repositories for ECS Workshop App
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: ecsworkshop
+
+Resources:
+  FrontendECR:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${EnvironmentName}-frontend"
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-frontend-ecr"
+
+  BackendECR:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${EnvironmentName}-backend"
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-backend-ecr"
+
+Outputs:
+  FrontendECRUri:
+    Value: !GetAtt FrontendECR.RepositoryUri
+    Export:
+      Name: !Sub "${EnvironmentName}-FrontendECRUri"
+  BackendECRUri:
+    Value: !GetAtt BackendECR.RepositoryUri
+    Export:
+      Name: !Sub "${EnvironmentName}-BackendECRUri"
