@@ -24,7 +24,7 @@ jobs:
       - name: Deploy VPC Stack
         run: |
           aws cloudformation deploy \
-            --template-file cloudformation/vpc.yaml \
+            --template-file cloudformation/vpc.cf.yml \
             --stack-name ecsworkshop-vpc \
             --region us-east-1 \
             --no-fail-on-empty-changeset
@@ -32,7 +32,7 @@ jobs:
       - name: Deploy ECR Stack
         run: |
           aws cloudformation deploy \
-            --template-file cloudformation/ecr.yaml \
+            --template-file cloudformation/ecr.cf.yml \
             --stack-name ecsworkshop-ecr \
             --region us-east-1 \
             --capabilities CAPABILITY_NAMED_IAM \
@@ -41,7 +41,7 @@ jobs:
       - name: Deploy ECS Stack
         run: |
           aws cloudformation deploy \
-            --template-file cloudformation/ecs.yaml \
+            --template-file cloudformation/ecs.cf.yml \
             --stack-name ecsworkshop-ecs \
             --region us-east-1 \
             --capabilities CAPABILITY_NAMED_IAM \
@@ -50,7 +50,7 @@ jobs:
       - name: Deploy CI/CD Stack
         run: |
           aws cloudformation deploy \
-            --template-file cloudformation/cicd.yaml \
+            --template-file cloudformation/cicd.yml \
             --stack-name ecsworkshop-cicd \
             --region us-east-1 \
             --capabilities CAPABILITY_NAMED_IAM \
