@@ -50,7 +50,7 @@ jobs:
       - name: Deploy CI/CD Stack
         run: |
           aws cloudformation deploy \
-            --template-file cloudformation/cicd.yml \
+            --template-file cloudformation/cicd.cf.yml \
             --stack-name ecsworkshop-cicd \
             --region us-east-1 \
             --capabilities CAPABILITY_NAMED_IAM \
