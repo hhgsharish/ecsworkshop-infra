@@ -1,0 +1,63 @@
+# Workflow: Deploys network and ECS stacks
+name: Deploy Infrastructure
+
+# Trigger: On push to main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    # Runner: GitHub-hosted Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      # Step: Check out repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step: Configure AWS CLI with credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # From GitHub secrets
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1 # Deploy in us-east-1
+
+      # Step: Deploy network stack
+      - name: Deploy CloudFormation network stack
+        run: |
+          aws cloudformation deploy \
+            --template-file templates/network-stack.cf.yml \ # Network template
+            --stack-name ecs-network-stack \ # Stack name
+            --region us-east-1
+
+      # Step: Deploy ECS stack
+      #- name: Deploy CloudFormation ECS stack
+      #  run: |
+      #    aws cloudformation deploy \
+      #      --template-file templates/ecs-stack.cf.yml \ # ECS template
+      #      --stack-name ecs-app-stack \ # Stack name
+      #      --capabilities CAPABILITY_IAM \ # Allow IAM creation
+      #      --region us-east-1 \
+      #      --parameter-overrides \ # Pass network stack outputs
+      #        VpcId=$(aws cloudformation describe-stacks \
+      #          --stack-name ecs-network-stack \
+      #          --query "Stacks[0].Outputs[?OutputKey=='VpcId'].OutputValue" \
+      #          --output text) \
+      #        PublicSubnet1Id=$(aws cloudformation describe-stacks \
+      #          --stack-name ecs-network-stack \
+      #          --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet1Id'].OutputValue" \
+      #          --output text) \
+      #        PublicSubnet2Id=$(aws cloudformation describe-stacks \
+      #          --stack-name ecs-network-stack \
+      #          --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet2Id'].OutputValue" \
+      #          --output text) \
+      #        PrivateSubnet1Id=$(aws cloudformation describe-stacks \
+      #          --stack-name ecs-network-stack \
+      #          --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet1Id'].OutputValue" \
+      #          --output text) \
+      #        PrivateSubnet2Id=$(aws cloudformation describe-stacks \
+      #          --stack-name ecs-network-stack \
+      #          --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet2Id'].OutputValue" \
+      #          --output text)
