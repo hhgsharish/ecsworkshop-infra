@@ -1,7 +1,7 @@
-# Workflow: Deploys network and ECS stacks
-name: Deploy Infrastructure
+# Workflow: Deploys network stack only
+name: Deploy Network Stack
 
-# Trigger: On push to main branch
+# Trigger: Runs when code is pushed to main branch
 on:
   push:
     branches:
@@ -9,56 +9,33 @@ on:
 
 jobs:
   deploy:
-    # Runner: GitHub-hosted Ubuntu
+    # Runner: GitHub-hosted Ubuntu environment
     runs-on: ubuntu-latest
     steps:
-      # Step: Check out repository code
+      # Step: Check out repository code to access files
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step: Configure AWS CLI with credentials
+      # Step: Verify template file exists
+      - name: Check template file
+        run: |
+          ls -l templates/network-stack.cf.yml || echo "Error: Template file not found"
+          if [ ! -f templates/network-stack.cf.yml ]; then exit 1; fi
+
+      # Step: Configure AWS CLI with credentials from secrets
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # From GitHub secrets
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1 # Deploy in us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # AWS access key
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # AWS secret key
+          aws-region: us-east-1 # Set region to us-east-1
 
-      # Step: Deploy network stack
-      - name: Deploy CloudFormation network stack
+      # Step: Check AWS CLI setup
+      - name: Verify AWS CLI
         run: |
-          aws cloudformation deploy \
-            --template-file templates/network-stack.cf.yml \ # Network template
-            --stack-name ecs-network-stack \ # Stack name
-            --region us-east-1
-            --no-fail-on-empty-changeset
+          aws --version # Print AWS CLI version
+          aws sts get-caller-identity # Verify credentials work
 
-      # Step: Deploy ECS stack
-      #- name: Deploy CloudFormation ECS stack
-      #  run: |
-      #    aws cloudformation deploy \
-      #      --template-file templates/ecs-stack.cf.yml \ # ECS template
-      #      --stack-name ecs-app-stack \ # Stack name
-      #      --capabilities CAPABILITY_IAM \ # Allow IAM creation
-      #      --region us-east-1 \
-      #      --parameter-overrides \ # Pass network stack outputs
-      #        VpcId=$(aws cloudformation describe-stacks \
-      #          --stack-name ecs-network-stack \
-      #          --query "Stacks[0].Outputs[?OutputKey=='VpcId'].OutputValue" \
-      #          --output text) \
-      #        PublicSubnet1Id=$(aws cloudformation describe-stacks \
-      #          --stack-name ecs-network-stack \
-      #          --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet1Id'].OutputValue" \
-      #          --output text) \
-      #        PublicSubnet2Id=$(aws cloudformation describe-stacks \
-      #          --stack-name ecs-network-stack \
-      #          --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet2Id'].OutputValue" \
-      #          --output text) \
-      #        PrivateSubnet1Id=$(aws cloudformation describe-stacks \
-      #          --stack-name ecs-network-stack \
-      #          --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet1Id'].OutputValue" \
-      #          --output text) \
-      #        PrivateSubnet2Id=$(aws cloudformation describe-stacks \
-      #          --stack-name ecs-network-stack \
-      #          --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet2Id'].OutputValue" \
-      #          --output text)
+      # Step: Deploy network stack using CloudFormation
+      - name: Deploy CloudFormation network stack
+        run: aws cloudformation deploy --template-file templates/network-stack.cf.yml --stack-name ecs-network-stack --region us-east-1
