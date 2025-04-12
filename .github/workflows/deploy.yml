@@ -31,6 +31,7 @@ jobs:
             --template-file templates/network-stack.cf.yml \ # Network template
             --stack-name ecs-network-stack \ # Stack name
             --region us-east-1
+            --no-fail-on-empty-changeset
 
       # Step: Deploy ECS stack
       #- name: Deploy CloudFormation ECS stack
