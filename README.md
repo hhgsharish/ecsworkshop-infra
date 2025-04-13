@@ -638,34 +638,9 @@ code ~/ecs-workshop
               --region us-east-1
 
         # Step: Deploy ECS stack
-        - name: Deploy CloudFormation ECS stack
-          run: |
-            aws cloudformation deploy \
-              --template-file templates/ecs-stack.cf.yml \ # ECS template
-              --stack-name ecs-app-stack \ # Stack name
-              --capabilities CAPABILITY_IAM \ # Allow IAM creation
-              --region us-east-1 \
-              --parameter-overrides \ # Pass network stack outputs
-                VpcId=$(aws cloudformation describe-stacks \
-                  --stack-name ecs-network-stack \
-                  --query "Stacks[0].Outputs[?OutputKey=='VpcId'].OutputValue" \
-                  --output text) \
-                PublicSubnet1Id=$(aws cloudformation describe-stacks \
-                  --stack-name ecs-network-stack \
-                  --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet1Id'].OutputValue" \
-                  --output text) \
-                PublicSubnet2Id=$(aws cloudformation describe-stacks \
-                  --stack-name ecs-network-stack \
-                  --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet2Id'].OutputValue" \
-                  --output text) \
-                PrivateSubnet1Id=$(aws cloudformation describe-stacks \
-                  --stack-name ecs-network-stack \
-                  --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet1Id'].OutputValue" \
-                  --output text) \
-                PrivateSubnet2Id=$(aws cloudformation describe-stacks \
-                  --stack-name ecs-network-stack \
-                  --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet2Id'].OutputValue" \
-                  --output text)
+        # Step: Deploy network stack using CloudFormation
+        - name: Deploy CloudFormation network stack
+        run: aws cloudformation deploy --template-file templates/network-stack.cf.yml --stack-name ecs-network-stack --region us-east-1
   ```
 
 #### 2.5 Store AWS Credentials
