@@ -157,6 +157,8 @@ code ~/ecs-workshop
 
 - Create `ecsworkshop-infra` on GitHub if it doesn’t exist (empty repo).
 
+
+
 #### 2.2 Network Stack Template
 
 - **File**: `templates/network-stack.cf.yml`
@@ -336,266 +338,280 @@ code ~/ecs-workshop
         Name: !Sub "${AWS::StackName}-PrivateSubnet2Id"
   ```
 
+
+
+
 #### 2.3 ECS Stack Template
 
 - **File**: `templates/ecs-stack.cf.yml`
 - **Content**:
   ```yaml
-  AWSTemplateFormatVersion: '2010-09-09'
-  Description: ECS cluster, services, ALB, and ECR for 2-tier app
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ECS cluster, services, ALB, and ECR for 2-tier app
 
-  # Parameters: Import network stack outputs
-  Parameters:
-    VpcId:
-      Type: String
-      Description: VPC ID from network stack
-    PublicSubnet1Id:
-      Type: String
-      Description: First public subnet ID for ALB
-    PublicSubnet2Id:
-      Type: String
-      Description: Second public subnet ID for ALB
-    PrivateSubnet1Id:
-      Type: String
-      Description: First private subnet ID for ECS
-    PrivateSubnet2Id:
-      Type: String
-      Description: Second private subnet ID for ECS
+# Parameters: Import network stack outputs for VPC and subnets
+Parameters:
+  VpcId:
+    Type: String
+    Description: VPC ID from network stack
+  PublicSubnet1Id:
+    Type: String
+    Description: First public subnet ID for ALB
+  PublicSubnet2Id:
+    Type: String
+    Description: Second public subnet ID for ALB
+  PrivateSubnet1Id:
+    Type: String
+    Description: First private subnet ID for ECS tasks
+  PrivateSubnet2Id:
+    Type: String
+    Description: Second private subnet ID for ECS tasks
 
-  Resources:
-    # ECR Repository: Stores Docker images
-    ECRRepository:
-      Type: AWS::ECR::Repository
-      Properties:
-        RepositoryName: my-app-repo # Single repo for frontend/backend
-        ImageScanningConfiguration:
-          ScanOnPush: true # Scan images for security
+Resources:
+  # ECR Repository: Stores Docker images for frontend and backend
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: my-app-repo # Single repo for both services
+      ImageScanningConfiguration:
+        ScanOnPush: true # Enable vulnerability scanning on push
 
-    # ECS Cluster: Orchestrates services
-    ECSCluster:
-      Type: AWS::ECS::Cluster
-      Properties:
-        ClusterName: my-ecs-cluster # Cluster name
+  # ECS Cluster: Manages services and tasks
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: my-ecs-cluster # Name of the cluster
 
-    # IAM Role: Allows tasks to pull images, log
-    ECSTaskExecutionRole:
-      Type: AWS::IAM::Role
-      Properties:
-        AssumeRolePolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service: ecs-tasks.amazonaws.com
-              Action: sts:AssumeRole # Trust ECS tasks
-        ManagedPolicyArns:
-          - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy # ECR, CloudWatch access
+  # IAM Role: Allows ECS tasks to pull images and log to CloudWatch
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole # Trust ECS tasks
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy # Permissions for ECR, logs
 
-    # IAM Role: Allows services to manage resources
-    ECSServiceRole:
-      Type: AWS::IAM::Role
-      Properties:
-        AssumeRolePolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service: ecs.amazonaws.com
-              Action: sts:AssumeRole
-        ManagedPolicyArns:
-          - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole # ECS permissions
+  # IAM Role: Allows ECS services to interact with AWS resources
+  ECSServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs.amazonaws.com
+            Action: sts:AssumeRole # Trust ECS services
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole # Permissions for ECS
 
-    # Security Group: ALB accepts internet traffic
-    ALBSecurityGroup:
-      Type: AWS::EC2::SecurityGroup
-      Properties:
-        VpcId: !Ref VpcId # Use imported VPC
-        GroupDescription: Security group for ALB
-        SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort: 80
-            ToPort: 80
-            CidrIp: 0.0.0.0/0 # Allow HTTP from anywhere
+  # Security Group: Allows HTTP traffic to ALB
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId # Use imported VPC ID
+      GroupDescription: Security group for ALB
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0 # Allow internet access on port 80
 
-    # Security Group: ECS tasks accept ALB traffic
-    ECSSecurityGroup:
-      Type: AWS::EC2::SecurityGroup
-      Properties:
-        VpcId: !Ref VpcId
-        GroupDescription: Security group for ECS tasks
-        SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort: 3000
-            ToPort: 3000
-            SourceSecurityGroupId: !Ref ALBSecurityGroup # Backend port
-          - IpProtocol: tcp
-            FromPort: 80
-            ToPort: 80
-            SourceSecurityGroupId: !Ref ALBSecurityGroup # Frontend port
+  # Security Group: Allows ALB to communicate with ECS tasks
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Security group for ECS tasks
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          SourceSecurityGroupId: !Ref ALBSecurityGroup # Backend port
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup # Frontend port
 
-    # ALB: Routes traffic to services
-    ALB:
-      Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-      Properties:
-        Subnets:
-          - !Ref PublicSubnet1Id # Place in public subnets
-          - !Ref PublicSubnet2Id
-        SecurityGroups:
-          - !Ref ALBSecurityGroup
-        Scheme: internet-facing # Publicly accessible
-    ALBListener:
-      Type: AWS::ElasticLoadBalancingV2::Listener
-      Properties:
-        LoadBalancerArn: !Ref ALB
-        Port: 80
-        Protocol: HTTP
-        DefaultActions:
-          - Type: forward
-            TargetGroupArn: !Ref FrontendTargetGroup # Default to frontend
+  # ALB: Routes internet traffic to ECS services
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        - !Ref PublicSubnet1Id # Place in public subnets
+        - !Ref PublicSubnet2Id
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Scheme: internet-facing # Publicly accessible ALB
 
-    # Target Group: Routes to frontend
-    FrontendTargetGroup:
-      Type: AWS::ElasticLoadBalancingV2::TargetGroup
-      Properties:
-        VpcId: !Ref VpcId
-        Port: 80
-        Protocol: HTTP
-        TargetType: ip # For Fargate
-        HealthCheckPath: / # Check frontend health
-    BackendTargetGroup:
-      Type: AWS::ElasticLoadBalancingV2::TargetGroup
-      Properties:
-        VpcId: !Ref VpcId
-        Port: 3000
-        Protocol: HTTP
-        TargetType: ip
-        HealthCheckPath: /api # Check backend health
+  # ALB Listener: Listens for HTTP traffic
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref FrontendTargetGroup # Default to frontend
 
-    # Listener Rule: Route /api* to backend
-    BackendListenerRule:
-      Type: AWS::ElasticLoadBalancingV2::ListenerRule
-      Properties:
-        ListenerArn: !Ref ALBListener
-        Priority: 1
-        Conditions:
-          - Field: path-pattern
-            Values: ['/api*'] # Match API paths
-        Actions:
-          - Type: forward
-            TargetGroupArn: !Ref BackendTargetGroup
+  # Target Group: Routes traffic to frontend tasks
+  FrontendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VpcId
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip # Required for Fargate
+      HealthCheckPath: / # Health check for frontend
 
-    # Task Definition: Frontend container
-    FrontendTaskDefinition:
-      Type: AWS::ECS::TaskDefinition
-      Properties:
-        Family: frontend-task # Task family name
-        NetworkMode: awsvpc # Fargate networking
-        RequiresCompatibilities:
-          - FARGATE # Serverless
-        Cpu: '256' # Small CPU allocation
-        Memory: '512' # Small memory allocation
-        ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
-        ContainerDefinitions:
-          - Name: frontend
-            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/my-app-repo:frontend-latest'
-            Essential: true # Required container
-            PortMappings:
-              - ContainerPort: 80 # Frontend port
-            LogConfiguration:
-              LogDriver: awslogs
-              Options:
-                awslogs-group: /ecs/frontend # Log group
-                awslogs-region: !Ref AWS::Region
-                awslogs-stream-prefix: frontend # Log prefix
+  # Target Group: Routes traffic to backend tasks
+  BackendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VpcId
+      Port: 3000
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: /api # Health check for backend
 
-    # Task Definition: Backend container
-    BackendTaskDefinition:
-      Type: AWS::ECS::TaskDefinition
-      Properties:
-        Family: backend-task
-        NetworkMode: awsvpc
-        RequiresCompatibilities:
-          - FARGATE
-        Cpu: '256'
-        Memory: '512'
-        ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
-        ContainerDefinitions:
-          - Name: backend
-            Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/my-app-repo:backend-latest'
-            Essential: true
-            PortMappings:
-              - ContainerPort: 3000 # Backend port
-            LogConfiguration:
-              LogDriver: awslogs
-              Options:
-                awslogs-group: /ecs/backend
-                awslogs-region: !Ref AWS::Region
-                awslogs-stream-prefix: backend
+  # Listener Rule: Routes /api* requests to backend
+  BackendListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Priority: 1
+      Conditions:
+        - Field: path-pattern
+          Values: ['/api*'] # Match API paths
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref BackendTargetGroup
 
-    # ECS Service: Runs frontend tasks
-    FrontendService:
-      Type: AWS::ECS::Service
-      Properties:
-        Cluster: !Ref ECSCluster
-        ServiceName: frontend-service
-        TaskDefinition: !Ref FrontendTaskDefinition
-        DesiredCount: 1 # One task
-        LaunchType: FARGATE
-        NetworkConfiguration:
-          AwsvpcConfiguration:
-            Subnets:
-              - !Ref PrivateSubnet1Id # Run in private subnets
-              - !Ref PrivateSubnet2Id
-            SecurityGroups:
-              - !Ref ECSSecurityGroup
-        LoadBalancers:
-          - ContainerName: frontend
-            ContainerPort: 80
-            TargetGroupArn: !Ref FrontendTargetGroup
+  # Task Definition: Defines frontend container
+  FrontendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: frontend-task # Task family name
+      NetworkMode: awsvpc # Fargate networking mode
+      RequiresCompatibilities:
+        - FARGATE # Use serverless Fargate
+      Cpu: '256' # Small CPU allocation
+      Memory: '512' # Small memory allocation
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: frontend
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/my-app-repo:frontend-latest'
+          Essential: true # Container must run
+          PortMappings:
+            - ContainerPort: 80 # Expose frontend port
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/frontend # Log group name
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: frontend # Log stream prefix
 
-    # ECS Service: Runs backend tasks
-    BackendService:
-      Type: AWS::ECS::Service
-      Properties:
-        Cluster: !Ref ECSCluster
-        ServiceName: backend-service
-        TaskDefinition: !Ref BackendTaskDefinition
-        DesiredCount: 1
-        LaunchType: FARGATE
-        NetworkConfiguration:
-          AwsvpcConfiguration:
-            Subnets:
-              - !Ref PrivateSubnet1Id
-              - !Ref PrivateSubnet2Id
-            SecurityGroups:
-              - !Ref ECSSecurityGroup
-        LoadBalancers:
-          - ContainerName: backend
-            ContainerPort: 3000
-            TargetGroupArn: !Ref BackendTargetGroup
+  # Task Definition: Defines backend container
+  BackendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: backend-task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '256'
+      Memory: '512'
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: backend
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/my-app-repo:backend-latest'
+          Essential: true
+          PortMappings:
+            - ContainerPort: 3000 # Expose backend port
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/backend
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: backend
 
-    # Log Group: Frontend logs
-    FrontendLogGroup:
-      Type: AWS::Logs::LogGroup
-      Properties:
-        LogGroupName: /ecs/frontend
-        RetentionInDays: 7 # Keep logs 7 days
+  # ECS Service: Runs frontend tasks (deferred until images are ready)
+  FrontendService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ALB # Ensure ALB is created
+      - ALBListener # Ensure listener is ready
+    Properties:
+      Cluster: !Ref ECSCluster
+      ServiceName: frontend-service
+      TaskDefinition: !Ref FrontendTaskDefinition
+      DesiredCount: 0 # No tasks until images are uploaded
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - !Ref PrivateSubnet1Id # Use private subnets
+            - !Ref PrivateSubnet2Id
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: frontend
+          ContainerPort: 80
+          TargetGroupArn: !Ref FrontendTargetGroup
 
-    # Log Group: Backend logs
-    BackendLogGroup:
-      Type: AWS::Logs::LogGroup
-      Properties:
-        LogGroupName: /ecs/backend
-        RetentionInDays: 7
+  # ECS Service: Runs backend tasks (deferred until images are ready)
+  BackendService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ALB # Ensure ALB is created
+      - ALBListener # Ensure listener is ready
+      - BackendListenerRule # Ensure routing rule is set
+    Properties:
+      Cluster: !Ref ECSCluster
+      ServiceName: backend-service
+      TaskDefinition: !Ref BackendTaskDefinition
+      DesiredCount: 0 # No tasks until images are uploaded
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - !Ref PrivateSubnet1Id
+            - !Ref PrivateSubnet2Id
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: backend
+          ContainerPort: 3000
+          TargetGroupArn: !Ref BackendTargetGroup
 
-  # Outputs: For accessing infrastructure
-  Outputs:
-    ALBDNSName:
-      Description: DNS name of the ALB
-      Value: !GetAtt ALB.DNSName
-    ECRRepositoryURI:
-      Description: URI of the ECR repository
-      Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/my-app-repo'
+  # CloudWatch Log Group: Stores frontend logs
+  FrontendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/frontend
+      RetentionInDays: 7 # Keep logs for 7 days
+
+  # CloudWatch Log Group: Stores backend logs
+  BackendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/backend
+      RetentionInDays: 7
+
+# Outputs: Provide access details for future app deployment
+Outputs:
+  ALBDNSName:
+    Description: DNS name of the ALB
+    Value: !GetAtt ALB.DNSName
+  ECRRepositoryURI:
+    Description: URI of the ECR repository
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/my-app-repo'
   ```
 
 #### 2.4 GitHub Actions Workflow

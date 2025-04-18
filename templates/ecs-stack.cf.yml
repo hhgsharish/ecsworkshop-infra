@@ -203,7 +203,7 @@ Resources:
       Cluster: !Ref ECSCluster
       ServiceName: frontend-service
       TaskDefinition: !Ref FrontendTaskDefinition
-      DesiredCount: 1 # Run one task
+      DesiredCount: 0 # Run one task
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
@@ -228,7 +228,7 @@ Resources:
       Cluster: !Ref ECSCluster
       ServiceName: backend-service
       TaskDefinition: !Ref BackendTaskDefinition
-      DesiredCount: 1
+      DesiredCount: 0
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
