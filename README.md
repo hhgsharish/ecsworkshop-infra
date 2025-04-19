@@ -69,7 +69,7 @@ Thank you for the clarification! I’ll address your requests by combining the n
 - **ECS Stack** (`ecs-stack.cf.yml`):
   - Imports VPC and subnet IDs from the network stack.
   - Creates an ECS cluster (`my-ecs-cluster`).
-  - Defines task definitions for frontend (port 80) and backend (port 3000), using Fargate.
+  - Defines task definitions for frontend (port 8080) and backend (port 3000), using Fargate.
   - Sets up ECS services to run one task each for frontend and backend in private subnets.
   - Configures an ALB in public subnets, routing `/api*` to backend and other requests to frontend.
   - Creates a single ECR repository (`my-app-repo`) for both frontend and backend images.
