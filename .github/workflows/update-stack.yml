@@ -43,4 +43,3 @@ jobs:
           aws cloudformation wait stack-update-complete \\
             --stack-name ecs-app-stack \\
             --region us-east-1
-EOL
