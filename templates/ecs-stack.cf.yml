@@ -157,15 +157,15 @@ Resources:
   # Backend Service Discovery: Registers backend service with Service Discovery
   # This allows other services to discover the backend service
   BackendServiceDiscoveryService:
-  Type: AWS::ServiceDiscovery::Service
-  Properties:
-    Name: backend
-    NamespaceId: !Ref ServiceDiscoveryNamespace
-    DnsConfig:
-      DnsRecords:
-        - Type: A
-          TTL: 60
-      RoutingPolicy: MULTIVALUE
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: backend
+      NamespaceId: !Ref ServiceDiscoveryNamespace
+      DnsConfig:
+        DnsRecords:
+          - Type: A
+            TTL: 60
+        RoutingPolicy: MULTIVALUE
 
   # Task Definition: Defines frontend container
   FrontendTaskDefinition:
@@ -222,7 +222,7 @@ Resources:
     DependsOn:
       - ALB # Ensure ALB is created
       - ALBListener # Ensure listener is ready
-      - BackendService # Ensure backend service is created
+      - BackendService
     Properties:
       Cluster: !Ref ECSCluster
       ServiceName: frontend-service
