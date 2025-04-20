@@ -122,6 +122,14 @@ Resources:
       TargetType: ip # Required for Fargate
       HealthCheckPath: / # Health check for frontend
 
+  # Service Discovery: Enables service discovery for ECS
+  ServiceDiscoveryNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: ecsworkshop.local # Custom domain for service discovery
+      Vpc: !Ref VpcId
+      Description: Private DNS namespace for ECS service discovery
+
   # Target Group: Routes traffic to backend tasks
   BackendTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -144,6 +152,20 @@ Resources:
       Actions:
         - Type: forward
           TargetGroupArn: !Ref BackendTargetGroup
+
+
+  # Backend Service Discovery: Registers backend service with Service Discovery
+  # This allows other services to discover the backend service
+  BackendServiceDiscoveryService:
+  Type: AWS::ServiceDiscovery::Service
+  Properties:
+    Name: backend
+    NamespaceId: !Ref ServiceDiscoveryNamespace
+    DnsConfig:
+      DnsRecords:
+        - Type: A
+          TTL: 60
+      RoutingPolicy: MULTIVALUE
 
   # Task Definition: Defines frontend container
   FrontendTaskDefinition:
@@ -193,12 +215,14 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: backend
 
+
   # ECS Service: Runs frontend tasks (deferred until images are ready)
   FrontendService:
     Type: AWS::ECS::Service
     DependsOn:
       - ALB # Ensure ALB is created
       - ALBListener # Ensure listener is ready
+      - BackendService # Ensure backend service is created
     Properties:
       Cluster: !Ref ECSCluster
       ServiceName: frontend-service
@@ -241,6 +265,9 @@ Resources:
         - ContainerName: backend
           ContainerPort: 3000
           TargetGroupArn: !Ref BackendTargetGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt BackendServiceDiscoveryService.Arn
+          Port: 3000
 
   # CloudWatch Log Group: Stores frontend logs
   FrontendLogGroup:
