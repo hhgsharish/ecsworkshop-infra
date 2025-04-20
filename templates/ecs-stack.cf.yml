@@ -1,5 +1,4 @@
 # This workflow updates the ECS App stack when changes are made to the CloudFormation template.
-# It uses the AWS CLI to update the stack and waits for the update to complete.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: ECS Application Stack for ecsworkshop-app
 
