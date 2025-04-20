@@ -267,7 +267,6 @@ Resources:
           TargetGroupArn: !Ref BackendTargetGroup
       ServiceRegistries:
         - RegistryArn: !GetAtt BackendServiceDiscoveryService.Arn
-          Port: 3000
 
   # CloudWatch Log Group: Stores frontend logs
   FrontendLogGroup:
