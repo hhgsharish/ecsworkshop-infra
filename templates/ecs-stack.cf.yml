@@ -1,4 +1,4 @@
-# This workflow updates the ECS App stack when changes are made to the CloudFormation template.
+---
 AWSTemplateFormatVersion: '2010-09-09'
 Description: ECS Application Stack for ecsworkshop-app
 
@@ -25,14 +25,6 @@ Resources:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: my-ecs-cluster
-
-  # CloudMap Namespace for Service Discovery
-  ServiceDiscoveryNamespace:
-    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
-    Properties:
-      Name: ecsworkshop.local
-      Vpc: !Ref VPCId
-      Description: Private DNS namespace for ECS service discovery
 
   # Backend Task Definition
   BackendTaskDefinition:
@@ -77,22 +69,7 @@ Resources:
           SecurityGroups:
             - !Ref SecurityGroupId
           AssignPublicIp: DISABLED
-      ServiceRegistries:
-        - RegistryArn: !GetAtt BackendServiceDiscoveryService.Arn
-          Port: 3000
       HealthCheckGracePeriodSeconds: 60
-
-  # Backend Service Discovery
-  BackendServiceDiscoveryService:
-    Type: AWS::ServiceDiscovery::Service
-    Properties:
-      Name: backend
-      NamespaceId: !Ref ServiceDiscoveryNamespace
-      DnsConfig:
-        DnsRecords:
-          - Type: A
-            TTL: 60
-        RoutingPolicy: MULTIVALUE
 
   # Frontend Task Definition
   FrontendTaskDefinition:
@@ -123,8 +100,6 @@ Resources:
   # Frontend Service
   FrontendService:
     Type: AWS::ECS::Service
-    DependsOn:
-      - BackendService
     Properties:
       Cluster: !Ref ECSCluster
       ServiceName: frontend-service
