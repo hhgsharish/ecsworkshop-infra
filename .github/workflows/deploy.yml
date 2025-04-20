@@ -9,7 +9,7 @@ on:
       - 'templates/ecs-stack.cf.yml'
 
 jobs:
-  update-stack:
+  deploy-stack:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
