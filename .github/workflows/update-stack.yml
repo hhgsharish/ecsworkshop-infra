@@ -1,6 +1,4 @@
-cd ~/ecs-workshop/ecsworkshop-infra
-mkdir -p .github/workflows
-cat > .github/workflows/update-stack.yml << EOL
+# This workflow updates the ECS App stack when changes are made to the CloudFormation template.
 name: Update ECS App Stack
 
 on:
@@ -37,6 +35,7 @@ jobs:
               ParameterKey=PrivateSubnet2,UsePreviousValue=true \\
               ParameterKey=SecurityGroupId,UsePreviousValue=true \\
               ParameterKey=ECRRepositoryUri,UsePreviousValue=true \\
+            --capabilities CAPABILITY_IAM \\
             --region us-east-1
 
       - name: Wait for stack update
