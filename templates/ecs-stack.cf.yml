@@ -199,4 +199,3 @@ Outputs:
   ALBDNSName:
     Description: DNS name of the Application Load Balancer
     Value: !GetAtt ALB.DNSName
----
