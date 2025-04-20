@@ -1,61 +1,46 @@
-# This workflow updates the ECS App stack when changes are made to the CloudFormation template.
-name: Deploy ECS App Stack
+# Workflow: Deploys network and ECS stacks
+name: Deploy Infrastructure
 
+# Trigger: Runs when code is pushed to main branch
 on:
   push:
     branches:
       - main
-    paths:
-      - 'templates/ecs-stack.cf.yml'
 
 jobs:
-  deploy-stack:
+  deploy:
+    # Runner: GitHub-hosted Ubuntu environment
     runs-on: ubuntu-latest
     steps:
+      # Step: Check out repository code to access files
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Step: Verify template files exist
+      - name: Check template files
+        run: |
+          ls -l templates/network-stack.cf.yml || echo "Error: Network template not found"
+          ls -l templates/ecs-stack.cf.yml || echo "Error: ECS template not found"
+          if [ ! -f templates/network-stack.cf.yml ] || [ ! -f templates/ecs-stack.cf.yml ]; then exit 1; fi
+
+      # Step: Configure AWS CLI with credentials from secrets
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: \${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: \${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # AWS access key
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # AWS secret key
+          aws-region: us-east-1 # Set region to us-east-1
 
-      - name: Fetch network stack outputs
-        id: network-outputs
+      # Step: Check AWS CLI setup
+      - name: Verify AWS CLI
         run: |
-          VPC_ID=\$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='VpcId'].OutputValue" --output text --region us-east-1)
-          PUBLIC_SUBNET1=\$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet1Id'].OutputValue" --output text --region us-east-1)
-          PUBLIC_SUBNET2=\$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet2Id'].OutputValue" --output text --region us-east-1)
-          PRIVATE_SUBNET1=\$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet1Id'].OutputValue" --output text --region us-east-1)
-          PRIVATE_SUBNET2=\$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet2Id'].OutputValue" --output text --region us-east-1)
-          SG_ID=\$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='SecurityGroupId'].OutputValue" --output text --region us-east-1)
-          echo "VPC_ID=\$VPC_ID" >> \$GITHUB_ENV
-          echo "PUBLIC_SUBNET1=\$PUBLIC_SUBNET1" >> \$GITHUB_ENV
-          echo "PUBLIC_SUBNET2=\$PUBLIC_SUBNET2" >> \$GITHUB_ENV
-          echo "PRIVATE_SUBNET1=\$PRIVATE_SUBNET1" >> \$GITHUB_ENV
-          echo "PRIVATE_SUBNET2=\$PRIVATE_SUBNET2" >> \$GITHUB_ENV
-          echo "SG_ID=\$SG_ID" >> \$GITHUB_ENV
+          aws --version # Print AWS CLI version
+          aws sts get-caller-identity # Verify credentials work
 
-      - name: Deploy CloudFormation stack
-        run: |
-          aws cloudformation deploy \\
-            --template-file templates/ecs-stack.cf.yml \\
-            --stack-name ecs-app-stack \\
-            --capabilities CAPABILITY_IAM \\
-            --region us-east-1 \\
-            --parameter-overrides \\
-              VPCId=\$VPC_ID \\
-              PublicSubnet1=\$PUBLIC_SUBNET1 \\
-              PublicSubnet2=\$PUBLIC_SUBNET2 \\
-              PrivateSubnet1=\$PRIVATE_SUBNET1 \\
-              PrivateSubnet2=\$PRIVATE_SUBNET2 \\
-              SecurityGroupId=\$SG_ID \\
-              ECRRepositoryUri=140955125134.dkr.ecr.us-east-1.amazonaws.com/my-app-repo
+      # Step: Deploy network stack
+      - name: Deploy CloudFormation network stack
+        run: aws cloudformation deploy --template-file templates/network-stack.cf.yml --stack-name ecs-network-stack --region us-east-1
 
-      - name: Wait for stack deployment
-        run: |
-          aws cloudformation wait stack-create-complete \\
-            --stack-name ecs-app-stack \\
-            --region us-east-1
+      # Step: Deploy ECS stack
+      - name: Deploy CloudFormation ECS stack
+        run: aws cloudformation deploy --template-file templates/ecs-stack.cf.yml --stack-name ecs-app-stack --capabilities CAPABILITY_IAM --region us-east-1 --parameter-overrides VpcId=$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='VpcId'].OutputValue" --output text) PublicSubnet1Id=$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet1Id'].OutputValue" --output text) PublicSubnet2Id=$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='PublicSubnet2Id'].OutputValue" --output text) PrivateSubnet1Id=$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet1Id'].OutputValue" --output text) PrivateSubnet2Id=$(aws cloudformation describe-stacks --stack-name ecs-network-stack --query "Stacks[0].Outputs[?OutputKey=='PrivateSubnet2Id'].OutputValue" --output text)
