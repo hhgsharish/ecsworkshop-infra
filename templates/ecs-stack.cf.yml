@@ -90,7 +90,7 @@ Resources:
           ToPort: 80
           SourceSecurityGroupId: !Ref ALBSecurityGroup # Frontend port
 
-  # ALB: Routes internet traffic to ECS services
+  ## ALB: Routes internet traffic to ECS services
   ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
