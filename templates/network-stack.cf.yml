@@ -129,7 +129,7 @@ Resources:
 
   
   
-  # NAT Gateway: Allows private subnets outbound internet access
+  ## NAT Gateway: Allows private subnets outbound internet access
   EIP:
     Type: AWS::EC2::EIP
     Properties:
