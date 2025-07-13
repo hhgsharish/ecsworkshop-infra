@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: VPC, subnets, internet gateway, route tables, and NAT gateway for ECS
 
-# Parameters for customizable CIDR blocks
+## Parameters for customizable CIDR blocks
 Parameters:
   VpcCidr:
     Type: String
