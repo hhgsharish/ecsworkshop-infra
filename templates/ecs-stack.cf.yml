@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: ECS cluster, services, ALB, and ECR for 2-tier app
 
-# Parameters: Import network stack outputs for VPC and subnets
+## Parameters: Import network stack outputs for VPC and subnets
 Parameters:
   VpcId:
     Type: String
