@@ -200,8 +200,16 @@ After successful deployment, the ECS stack provides:
 3. Check ALB is running and target groups are healthy
 4. Validate ECR repository is accessible
 
+## Application Deployment
+
+For deploying the 2-tier application (frontend and backend) on this ECS cluster, follow the instructions in the companion repository:
+
+**📦 [ECS Workshop Application Repository](https://github.com/himanshurgit/ecsworkshop-app.git)**
+
+This repository contains the Dockerized frontend and backend applications along with CI/CD pipelines to build, push to ECR, and deploy to the ECS cluster created by this infrastructure.
+
 ## Next Steps
-1. Deploy application containers to ECR repository
+1. Deploy application containers to ECR repository using the app repository above
 2. Update ECS service desired count to start tasks
 3. Configure custom domain and SSL certificate
 4. Set up monitoring alerts and dashboards
