@@ -2,6 +2,10 @@
 
 A comprehensive AWS infrastructure setup for deploying a 2-tier microservice application using Amazon ECS (Elastic Container Service) with Fargate, Application Load Balancer, and supporting AWS services.
 
+## 📚 Learning Resources
+
+This project is part of the [**Learn Amazon ECS over a Weekend**](https://shorturl.at/y8ys4) course, which provides comprehensive hands-on experience with containerized applications on AWS.
+
 ## Architecture Overview
 
 This infrastructure creates a highly available, scalable, and secure environment for containerized applications across multiple availability zones.
